@@ -2,6 +2,7 @@ package io.gojek.codingtest.parkinglot.storage;
 
 import io.gojek.codingtest.model.Car;
 import io.gojek.codingtest.model.Slot;
+import io.gojek.codingtest.parkinglot.ParkingLot;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -11,35 +12,45 @@ import java.util.stream.Collectors;
  */
 public class InMemoryStorageService implements ParkingLotStorageService {
 
-  private final int capacity;
-  private SortedSet<Slot> freeSlots = new TreeSet<>();
-  private Map<Slot, Car> occupiedSlots = new HashMap<>();
-  private Map<Car, Slot> carsToSlots = new HashMap<>();
+  private final List<ParkingFloor> floors = new ArrayList<>();
+  private final SortedSet<ParkingFloor> freeFloors = new TreeSet<>();
+  private final Map<Car, Slot> carsToSlots = new HashMap<>();
+  private int freeSlotCount;
+  private int occupiedSlotCount;
 
   public InMemoryStorageService(int capacity) {
-    this.capacity = capacity;
-    populateFreeSlots(capacity);
+    populateFloors(1, capacity);
+    freeSlotCount = capacity;
+    occupiedSlotCount = 0;
   }
 
-  private void populateFreeSlots(int capacity) {
-    for (int i = 1; i <= capacity; i++) {
-      freeSlots.add(new Slot(i));
+  public InMemoryStorageService(int floorCount, int floorCapacity) {
+    populateFloors(floorCount, floorCapacity);
+    freeSlotCount = floorCount * floorCapacity;
+    occupiedSlotCount = 0;
+  }
+
+  private void populateFloors(int floorCount, int floorCapacity) {
+    for (int i=0; i<floorCount; i++){
+      floors.add(new ParkingFloor(i, floorCapacity));
     }
   }
 
   @Override
   public Slot closestFreeSlot() {
-    if (freeSlots.isEmpty()) {
+    if (freeFloors.isEmpty()) {
       return null;
     }
-    return freeSlots.first();
+    return freeFloors.first().closestFreeSlot();
   }
 
   @Override
   public void add(Slot slot, Car car) {
-    occupiedSlots.put(slot, car);
+    ParkingFloor floor = floors.get(slot.getFloorId());
+    floor.addCar(slot, car);
     carsToSlots.put(car, slot);
-    freeSlots.remove(slot);
+    freeSlotCount--;
+    occupiedSlotCount++;
   }
 
   @Override
@@ -49,18 +60,21 @@ public class InMemoryStorageService implements ParkingLotStorageService {
 
   @Override
   public Slot remove(Slot slot) {
-    if (!occupiedSlots.containsKey(slot)) {
-      return null;
-    }
-    Car car = occupiedSlots.remove(slot);
-    freeSlots.add(slot);
+    ParkingFloor floor = floors.get(slot.getFloorId());
+    Car car = floor.removeCar(slot);
     carsToSlots.remove(car);
+    freeSlotCount++;
+    occupiedSlotCount--;
     return slot;
   }
 
   @Override
   public TreeMap<Slot, Car> allOccupiedSlots() {
-    return new TreeMap<>(occupiedSlots);
+    TreeMap<Slot, Car> allSlots = new TreeMap<>();
+    for (ParkingFloor floor : floors) {
+      allSlots.putAll(floor.allOccupiedSlots());
+    }
+    return allSlots;
   }
 
   @Override
@@ -80,12 +94,12 @@ public class InMemoryStorageService implements ParkingLotStorageService {
 
   @Override
   public int occupiedSlotCount() {
-    return occupiedSlots.size();
+    return occupiedSlotCount;
   }
 
   @Override
   public int freeSlotsCount() {
-    return freeSlots.size();
+    return freeSlotCount;
   }
 
 }

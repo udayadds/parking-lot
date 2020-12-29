@@ -4,10 +4,21 @@ import java.util.Objects;
 
 public class Slot implements Comparable<Slot> {
 
-  private int id;
+  private final int id;
+  private final int floorId;
 
   public Slot(int id) {
     this.id = id;
+    this.floorId = 1;
+  }
+
+  public int getFloorId() {
+    return floorId;
+  }
+
+  public Slot(int id, int floorId) {
+    this.id = id;
+    this.floorId = floorId;
   }
 
   public int getId() {
