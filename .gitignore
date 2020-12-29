@@ -1,0 +1,12 @@
+# Output
+/target/
+*.class
+*.jar
+
+# Intellij
+.idea/
+.idea/*.xml
+*.iml
+
+# virtual machine crash logs
+hs_err_pid*
